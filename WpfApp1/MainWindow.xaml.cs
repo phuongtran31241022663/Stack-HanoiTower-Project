@@ -1,57 +1,73 @@
 ﻿using System;
 using System.Buffers.Text;
-using System.Net.NetworkInformation;
-using System.Runtime.Intrinsics.X86;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection.Emit;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Shapes;
-using static WpfApp1.MainWindow.DT;
+using static WpfApp1.MainWindow.DataStructures;
+
 
 namespace WpfApp1
 {
     public partial class MainWindow : Window
     {
-        public class DT // Cấu trúc dữ liệu
+        DataStructures.Tower tower;
+        HanoiLogic logic;
+        TowerVisualizer visualizer;
+        public MainWindow()
+        {
+            InitializeComponent();
+            tower ??= new DataStructures.Tower();
+            visualizer = new TowerVisualizer(
+    MainCanvas,
+    PegX,
+    BaseY,
+    DiskHeight
+);
+            visualizer.DrawStatic();
+
+            logic = new HanoiLogic();
+        }
+
+        // Cấu trúc dữ liệu
+        public static class DataStructures
         {
             // Disk – Đĩa
             public class Disk
             {
-                public int Size;        // kích thước của đĩa
-                public Disk? Next;   // trỏ đến đĩa bên dưới trong stack
+                public int Size { get; }        // kích thước của đĩa
+                internal Disk? Next;   // trỏ đến đĩa bên dưới trong stack
+                // internal: chỉ dùng trong cấu trúc dữ liệu, UI không truy cập
                 public Disk(int size)
                 {
                     Size = size;
-                    Next = null;
                 }
             }
             /*Disk = “nút đĩa” – giống như đĩa trong stack.
-
             size = số nguyên biểu thị kích thước.
-
             next = trỏ đến đĩa bên dưới (giống linked list).*/
-            // ---------------- Stack ----------------
+            // Stack
             public class MyStack
             {
-                public Disk? Top; // đĩa trên cùng
-
+                private Disk? Top; // đĩa trên cùng
                 public bool IsEmpty() => Top == null;
-
-                public bool Push(Disk node)
+                public bool Push(Disk d)
                 {
                     // Nếu cọc trống hoặc đĩa trên cùng lớn hơn → hợp lệ
-                    if (Top == null || Top.Size > node.Size)
+                    if (Top == null || Top.Size > d.Size)
                     {
-                        node.Next = Top;
-                        Top = node;
+                        d.Next = Top;
+                        Top = d;
                         return true;
                     }
-
                     // Ngược lại → không hợp lệ
                     return false;
                 }
-
                 public Disk? Pop()
                 {
                     if (IsEmpty()) return null;
@@ -59,7 +75,6 @@ namespace WpfApp1
                     Top = Top.Next;
                     return temp;
                 }
-
                 public int Count() // đếm số đĩa trong stack
                 {
                     int c = 0;
@@ -67,161 +82,78 @@ namespace WpfApp1
                         c++;
                     return c;
                 }
+                public IEnumerable<Disk> ToList()
+                {
+                    for (var cur = Top; cur != null; cur = cur.Next)
+                        yield return cur;
+                }
+
+                // Phục vụ thuật toán so sánh
+                public Disk? Peek() => Top;
+                public int PeekSize() => Top?.Size ?? int.MaxValue;
             }
             // Tower chứa 3 cọc
             public class Tower
             {
-                public MyStack A = new MyStack();
-                public MyStack B = new MyStack();
-                public MyStack C = new MyStack();
+                private readonly MyStack[] pegs =
+                {
+                new MyStack(),
+                new MyStack(),
+                new MyStack()
+                };
+                public MyStack Get(int i) => pegs[i];
             }
-
         }
-
-        public class HanoiLogic //BACKEND -- Thuật toán
+        // Thuật toán
+        public class HanoiLogic
         {
-            public class HanoiFrame
+            public List<(int From, int To)> Moves = new List<(int From, int To)>();
+            public Func<int, int, DataStructures.Disk, Task>? OnMove;
+
+            public async Task MoveBetween(DataStructures.Tower tower, int fromIndex, int toIndex)
             {
-                public int n;
-                public int src, dest, aux;
-                public int state;
+                var from = tower.Get(fromIndex);
+                var to = tower.Get(toIndex);
+                DataStructures.Disk? disk = null;
 
-                public HanoiFrame(int n, int src, int dest, int aux, int state = 0)
+                // Pop & push thật
+                if (!from.IsEmpty() && (to.IsEmpty() || from.PeekSize() < to.PeekSize()))
                 {
-                    this.n = n;
-                    this.src = src;
-                    this.dest = dest;
-                    this.aux = aux;
-                    this.state = state;
+                    disk = from.Pop();
+                    to.Push(disk);
                 }
+                else if (!to.IsEmpty())
+                {
+                    disk = to.Pop();
+                    from.Push(disk);
+                    (fromIndex, toIndex) = (toIndex, fromIndex);
+                }
+
+                if (disk != null && OnMove != null)
+                    await OnMove(fromIndex, toIndex, disk);
             }
-
-            public class FrameNode
-            {
-                public HanoiFrame Data;
-                public FrameNode? Next;
-
-                public FrameNode(HanoiFrame data)
-                {
-                    Data = data;
-                    Next = null;
-                }
-            }
-
-            public class FrameStack
-            {
-                private FrameNode? top;
-
-                public bool IsEmpty() => top == null;
-
-                public void Push(HanoiFrame frame)
-                {
-                    FrameNode node = new FrameNode(frame);
-                    node.Next = top;
-                    top = node;
-                }
-
-                public HanoiFrame? Pop()
-                {
-                    if (top == null) return null;
-                    HanoiFrame f = top.Data;
-                    top = top.Next;
-                    return f;
-                }
-            }
-            public class MoveDisk
-            {
-                public int From, To;
-                public MoveDisk? Next;
-
-                public MoveDisk(int from, int to)
-                {
-                    From = from;
-                    To = to;
-                    Next = null;
-                }
-            }
-
-            public class MoveStack
-            {
-                public MoveDisk? Top;
-
-                public bool IsEmpty() => Top == null;
-
-                public void Push(int from, int to)
-                {
-                    MoveDisk node = new MoveDisk(from, to);
-                    node.Next = Top;
-                    Top = node;
-                }
-                public MoveDisk? Pop()
-                {
-                    if (Top == null) return null;
-                    var t = Top;
-                    Top = Top.Next;
-                    return t;
-                }
-            }
-            public int Step { get; private set; } = 0;
-            public MoveStack Moves = new MoveStack();
-
-            private void AddMove(int from, int to)
-            {
-                Moves.Push(from, to);
-                Step++;
-            }
-
             // Hàm lặp – Iterative
-            public void SolveIterative(int n)
+            public async Task SolveIterative(int n, DataStructures.Tower tower)
             {
-                MyStack[] towers = { new MyStack(), new MyStack(), new MyStack() };
-                for (int i = n; i >= 1; i--)
-                    towers[0].Push(new Disk(i));
-
                 int src = 0, aux = 1, dest = 2;
                 if (n % 2 == 0) (aux, dest) = (dest, aux);
-
                 int totalMoves = (1 << n) - 1;
 
                 for (int i = 1; i <= totalMoves; i++)
                 {
-                    int from = -1, to = -1;
-
-                    switch (i % 3)
-                    {
-                        case 1: from = src; to = dest; break;
-                        case 2: from = src; to = aux; break;
-                        case 0: from = aux; to = dest; break;
-                    }
-
-                    // Chọn hướng hợp lệ
-                    int topFrom = towers[from].Top?.Size ?? int.MaxValue;
-                    int topTo = towers[to].Top?.Size ?? int.MaxValue;
-
-                    if (topFrom < topTo)
-                    {
-                        towers[to].Push(towers[from].Pop()!);
-                        AddMove(from, to);
-                    }
-                    else
-                    {
-                        towers[from].Push(towers[to].Pop()!);
-                        AddMove(to, from);
-                    }
+                    if (i % 3 == 1) await MoveBetween(tower, src, dest);
+                    else if (i % 3 == 2) await MoveBetween(tower, src, aux);
+                    else await MoveBetween(tower, aux, dest);
                 }
             }
-
-
-            // Hàm Hanoi – Thuật toán Tháp Hà Nội
-            public void SolveRecursive(int n, int src, int dest, int aux)
+            // Hàm đệ quy
+            public async Task SolveRecursive(int n, int src, int dest, int aux, DataStructures.Tower tower)
             {
                 if (n == 0) return;
 
-                SolveRecursive(n - 1, src, aux, dest);
-
-                AddMove(src, dest);
-
-                SolveRecursive(n - 1, aux, dest, src);
+                await SolveRecursive(n - 1, src, aux, dest, tower);
+                await MoveBetween(tower, src, dest);
+                await SolveRecursive(n - 1, aux, dest, src, tower);
             }
             /*n = số đĩa cần di chuyển.
             src = cọc nguồn, dest = cọc đích, aux = cọc phụ.
@@ -230,330 +162,327 @@ namespace WpfApp1
             Di chuyển đĩa lớn nhất sang cọc đích.
             Chuyển n-1 đĩa từ cọc phụ sang cọc đích.*/
 
-            public void SolveNonRecursive(int n)
+            // Hàm không đệ quy
+            public async Task SolveNonRecursive(int n, DataStructures.Tower tower)
             {
-                FrameStack st = new FrameStack();
+                int src = 0, aux = 1, dest = 2;
+                if (n % 2 == 0) (aux, dest) = (dest, aux);
 
-                st.Push(new HanoiFrame(n, 0, 2, 1));
+                int totalMoves = (1 << n) - 1;
 
-                while (!st.IsEmpty())
+                for (int i = 1; i <= totalMoves; i++)
                 {
-                    HanoiFrame f = st.Pop()!;
-
-                    if (f.n == 0) continue;
-
-                    if (f.state == 0)
-                    {
-                        f.state = 1;
-                        st.Push(f);
-
-                        st.Push(new HanoiFrame(
-                            f.n - 1,
-                            f.src,
-                            f.aux,
-                            f.dest
-                        ));
-                    }
+                    // Lặp theo thứ tự 3 cặp cọc
+                    if (i % 3 == 1)
+                        await MoveBetween(tower, src, dest);
+                    else if (i % 3 == 2)
+                        await MoveBetween(tower, src, aux);
                     else
-                    {
-                        AddMove(f.src, f.dest);
-
-                        st.Push(new HanoiFrame(
-                            f.n - 1,
-                            f.aux,
-                            f.dest,
-                            f.src
-                        ));
-                    }
+                        await MoveBetween(tower, aux, dest);
                 }
             }
         }
-        //-----------UI------------
-        public MainWindow()
+
+        // UI
+
+        private int totalDisks = 0;
+        private readonly double[] PegX = { 225, 450, 675 };
+        private const double BaseY = 420;
+        private const double pegHeight = 220;
+        private const int DiskHeight = 25;
+
+        private int moveDelay = 500;
+
+        private bool isPaused = false;
+        private bool stepMode = false;
+        private bool nextStep = false;
+        private CancellationTokenSource? cts;
+        private bool isRestarting = false;
+
+        class TowerVisualizer
         {
-            InitializeComponent();
-        }
-        DT.Tower tower = new DT.Tower();
-        HanoiLogic logic = new HanoiLogic();
+            private readonly Canvas canvas;
+            private readonly Dictionary<DataStructures.Disk, Rectangle> diskUI = new();
+            private readonly Dictionary<DataStructures.Disk, TextBlock> labelUI = new();
 
-        int totalDisks = 0;
-        const int DiskHeight = 20;
-        const int BaseY = 350;
-        bool isPaused = false;
-        bool stepMode = false;
-        bool nextStep = false;
+            private readonly double[] PegX;
+            private readonly double BaseY;
+            private readonly int DiskHeight;
+            private const double PegHeight = 220;
 
-
-        // --- Vẽ 3 cọc + đế ---
-        void DrawPegs()
-        {
-            double pegHeight = 100 + totalDisks * 25;
-
-            for (int i = 0; i < 3; i++)
+            public TowerVisualizer(Canvas canvas, double[] pegX, double baseY, int diskHeight)
             {
-                double xCenter = 150 + i * 250;
-
-                // Thân cọc
-                Rectangle peg = new Rectangle
-                {
-                    Width = 10,
-                    Height = pegHeight,
-                    Fill = Brushes.SaddleBrown,
-                    RadiusX = 3,
-                    RadiusY = 3
-                };
-                Canvas.SetLeft(peg, xCenter - peg.Width / 2);
-                Canvas.SetTop(peg, BaseY - pegHeight);
-                Canvas.SetZIndex(peg, 0);
-                MainCanvas.Children.Add(peg);
-
-                // Đế
-                Rectangle basePlate = new Rectangle
-                {
-                    Width = 120,
-                    Height = 10,
-                    Fill = Brushes.Peru,
-                    RadiusX = 2,
-                    RadiusY = 2
-                };
-                Canvas.SetLeft(basePlate, xCenter - basePlate.Width / 2);
-                Canvas.SetTop(basePlate, BaseY);
-                Canvas.SetZIndex(basePlate, 0);
-                MainCanvas.Children.Add(basePlate);
+                this.canvas = canvas;
+                PegX = pegX;
+                BaseY = baseY;
+                DiskHeight = diskHeight;
             }
-        }
-        // --- Dictionary ánh xạ Disk -> UI ---
-        Dictionary<DT.Disk, Rectangle> diskUI = new();
-        Dictionary<DT.Disk, TextBlock> labelUI = new();
-
-        // --- Khởi tạo đĩa UI ---
-        void InitDisksUI(int n)
-        {
-            tower = new DT.Tower();
-            diskUI.Clear();
-            labelUI.Clear();
-
-            for (int i = n; i >= 1; i--)
+            public void ClearAll()
             {
-                var d = new DT.Disk(i);
-                tower.A.Push(d);
+                canvas.Children.Clear();
+                diskUI.Clear();
+                labelUI.Clear();
+            }
 
-                double w = DiskWidth(d);
-                Rectangle rect = new Rectangle
+            public void RegisterDisk(DataStructures.Disk d)
+            {
+                double width = 40 + d.Size * 20;
+
+                var rect = new Rectangle
                 {
-                    Width = w,
+                    Width = width,
                     Height = DiskHeight,
-                    RadiusX = 5,
-                    RadiusY = 5,
-                    Fill = new LinearGradientBrush(
-                        Color.FromRgb((byte)(50 + d.Size * 20),
-                                      (byte)(100 + d.Size * 10),
-                                      (byte)(200 - d.Size * 10)),
-                        Colors.White, 90),
+                    Fill = new SolidColorBrush(Color.FromRgb((byte)(60 + d.Size * 20), 100, 200)),
                     Stroke = Brushes.Black,
-                    StrokeThickness = 1
+                    RadiusX = 4,
+                    RadiusY = 4
                 };
-                Canvas.SetZIndex(rect, 1);
 
-                TextBlock label = new TextBlock
+                var lbl = new TextBlock
                 {
                     Text = d.Size.ToString(),
-                    Width = w,
-                    FontWeight = FontWeights.Bold,
+                    Width = width,
+                    TextAlignment = TextAlignment.Center,
                     Foreground = Brushes.White,
-                    TextAlignment = TextAlignment.Center
+                    FontWeight = FontWeights.Bold
                 };
-                Canvas.SetZIndex(label, 2);
 
                 diskUI[d] = rect;
-                labelUI[d] = label;
-                MainCanvas.Children.Add(rect);
-                MainCanvas.Children.Add(label);
+                labelUI[d] = lbl;
+
+                canvas.Children.Add(rect);
+                canvas.Children.Add(lbl);
+            }
+            public void DrawStatic()
+            {
+                string[] names = { "A", "B", "C" };
+
+                for (int i = 0; i < 3; i++)
+                {
+                    // Cọc
+                    var peg = new Rectangle
+                    {
+                        Width = 10,
+                        Height = PegHeight,
+                        Fill = Brushes.Sienna
+                    };
+                    Canvas.SetLeft(peg, PegX[i] - 5);
+                    Canvas.SetTop(peg, BaseY - PegHeight);
+                    canvas.Children.Add(peg);
+
+                    // Đế
+                    var baseRect = new Rectangle
+                    {
+                        Width = 160,
+                        Height = 10,
+                        Fill = Brushes.Peru
+                    };
+                    Canvas.SetLeft(baseRect, PegX[i] - 80);
+                    Canvas.SetTop(baseRect, BaseY);
+                    canvas.Children.Add(baseRect);
+
+                    // Nhãn
+                    var label = new TextBlock
+                    {
+                        Text = names[i],
+                        FontSize = 16,
+                        FontWeight = FontWeights.Bold
+                    };
+                    Canvas.SetLeft(label, PegX[i] - 8);
+                    Canvas.SetTop(label, BaseY + 12);
+                    canvas.Children.Add(label);
+                }
+            }
+            // 2️⃣ Khởi tạo đĩa (chỉ làm 1 lần)
+            public void InitDisks(DataStructures.Tower tower, int n)
+            {
+                for (int i = n; i >= 1; i--)
+                {
+                    var d = new DataStructures.Disk(i);
+                    tower.Get(0).Push(d);
+                    RegisterDisk(d);
+                    SetDiskPosition(d, 0, n - i);
+                }
+            }
+
+            public void SetDiskPosition(DataStructures.Disk d, int pegIndex, int level)
+            {
+                var rect = diskUI[d];
+                var lbl = labelUI[d];
+
+                double x = PegX[pegIndex] - rect.Width / 2;
+                double y = BaseY - (level + 1) * (DiskHeight + 4);
+
+                Canvas.SetLeft(rect, x);
+                Canvas.SetTop(rect, y);
+                Canvas.SetLeft(lbl, x);
+                Canvas.SetTop(lbl, y);
+            }
+            public async Task MoveDisk(DataStructures.Disk d, int pegIndex, int level)
+            {
+                if (!diskUI.ContainsKey(d)) return; // tránh lỗi null
+                var rect = diskUI[d];
+                var lbl = labelUI[d];
+
+                double targetX = PegX[pegIndex] - rect.Width / 2;
+                double targetY = BaseY - (level + 1) * (DiskHeight + 4);
+                double liftY = BaseY - PegHeight - DiskHeight;
+
+                await AnimateY(rect, lbl, liftY);
+                await AnimateX(rect, lbl, targetX);
+                await AnimateY(rect, lbl, targetY);
+            }
+            private Task AnimateX(UIElement r, UIElement l, double x)
+            {
+                var tcs = new TaskCompletionSource<bool>();
+                var anim = new DoubleAnimation(x, TimeSpan.FromMilliseconds(300));
+                anim.Completed += (_, _) => tcs.TrySetResult(true);
+                r.BeginAnimation(Canvas.LeftProperty, anim);
+                l.BeginAnimation(Canvas.LeftProperty, anim);
+                return tcs.Task;
+            }
+
+            private Task AnimateY(UIElement r, UIElement l, double y)
+            {
+                var tcs = new TaskCompletionSource<bool>();
+                var anim = new DoubleAnimation(y, TimeSpan.FromMilliseconds(300));
+                anim.Completed += (_, _) => tcs.TrySetResult(true);
+                r.BeginAnimation(Canvas.TopProperty, anim);
+                l.BeginAnimation(Canvas.TopProperty, anim);
+                return tcs.Task;
             }
         }
-        double DiskWidth(DT.Disk d)
+        private async void Run_Click(object sender, RoutedEventArgs e)
         {
-            double maxWidth = 150; // tối đa, tránh chồng
-            double minWidth = 50;
-            return minWidth + (maxWidth - minWidth) * (d.Size - 1) / (totalDisks - 1);
-        }
-        void DrawDisks()
-        {
-            DrawStackUI(tower.A, 0);
-            DrawStackUI(tower.B, 1);
-            DrawStackUI(tower.C, 2);
-        }
-
-        // --- Vẽ lại stack ---
-        void DrawStackUI(DT.MyStack stack, int pegIndex)
-        {
-            var disks = new List<DT.Disk>();
-            for (var d = stack.Top; d != null; d = d.Next)
-                disks.Add(d);
-            disks.Reverse();
-
-            double xCenter = 150 + pegIndex * 250;
-
-            for (int i = 0; i < disks.Count; i++)
+            // Nếu đang chạy tiến trình cũ -> dừng và chạy lại mới
+            if (cts != null)
             {
-                var d = disks[i];
-                double x = xCenter - diskUI[d].Width / 2;
-                double y = BaseY - (i + 1) * (DiskHeight + 3);
-                Canvas.SetLeft(diskUI[d], x);
-                Canvas.SetTop(diskUI[d], y);
-                Canvas.SetLeft(labelUI[d], x);
-                Canvas.SetTop(labelUI[d], y + 2);
+                isRestarting = true;       // 🔸 Đánh dấu là restart
+                cts.Cancel();              // 🔸 Dừng tiến trình hiện tại
+                return;                    // 🔸 Đợi tiến trình cũ dừng
+            }
+
+            // 🔹 Nếu không có tiến trình nào -> bắt đầu chạy mới
+            await StartNewRun();
+        }
+
+        private async Task StartNewRun()
+        {
+            cts = new CancellationTokenSource();
+
+            // 🔹 RESET trạng thái trước khi chạy
+            isPaused = false;          // ✅ rất quan trọng!
+            stepMode = false;
+            nextStep = false;
+
+            RunButton.IsEnabled = true;
+            PauseButton.IsEnabled = true;
+            ResumeButton.IsEnabled = false;
+
+            try
+            {
+                await RunAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                if (isRestarting)
+                {
+                    isRestarting = false;
+                    cts = null;
+                    await StartNewRun();   // 🔁 chạy lại ngay
+                    return;
+                }
+
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    StepDescription.Text = "🛑 Thuật toán cũ đã dừng.";
+                });
+            }
+            finally
+            {
+                cts = null;
+                RunButton.IsEnabled = true;
+                PauseButton.IsEnabled = false;
+                ResumeButton.IsEnabled = false;
             }
         }
-
-        // --- Reset UI khi Run ---
-        async void Run_Click(object sender, RoutedEventArgs e)
+        private async Task RunAsync(CancellationToken token)
         {
-            if (!int.TryParse(DiskCountTextBox.Text, out int n) || n <= 0)
+            logic.Moves.Clear();
+            visualizer.ClearAll();
+
+            if (!int.TryParse(DiskCountTextBox.Text, out int n) || n < 1 || n > 8)
             {
-                MessageBox.Show("Nhập số đĩa hợp lệ (>0)");
+                MessageBox.Show("Nhập số đĩa từ 1 đến 8!", "Lỗi nhập liệu");
                 return;
             }
 
-            totalDisks = n;
+            tower = new DataStructures.Tower();
+            visualizer.DrawStatic();
+            visualizer.InitDisks(tower, n);
 
-            // --- Reset UI & tower & logic ---
-            MainCanvas.Children.Clear();
-            tower = new DT.Tower();
-            diskUI.Clear();
-            labelUI.Clear();
-            logic = new HanoiLogic();
-            isPaused = false;
-            stepMode = false;
-            nextStep = false;
-
-            // --- Vẽ cọc + đế ---
-            DrawPegs();
-
-            // --- Khởi tạo đĩa ---
-            InitDisksUI(n);
-
-            // --- Vẽ stack ban đầu ---
-            DrawStackUI(tower.A, 0);
-            DrawStackUI(tower.B, 1);
-            DrawStackUI(tower.C, 2);
-
-            // --- Tính moves theo thuật toán ---
             string algo = (AlgorithmComboBox.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Recursive";
+            await Dispatcher.InvokeAsync(() => StepDescription.Text = $"Thuật toán: {algo}");
+
+            logic.OnMove = async (from, to, disk) =>
+            {
+                token.ThrowIfCancellationRequested();
+                await WaitIfPausedAsync(token);
+
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    StepDescription.Text = $"→ Di chuyển đĩa {disk.Size} từ {(char)('A' + from)} sang {(char)('A' + to)}";
+                });
+
+                int level = tower.Get(to).Count() - 1;
+                await visualizer.MoveDisk(disk, to, level);
+                await Task.Delay(moveDelay, token);
+            };
+
+            await Task.Yield();
+
             switch (algo)
             {
                 case "Recursive":
-                    logic.SolveRecursive(n, 0, 2, 1);
+                    await logic.SolveRecursive(n, 0, 2, 1, tower);
                     break;
                 case "Iterative":
-                    logic.SolveIterative(n);
+                    await logic.SolveIterative(n, tower);
                     break;
                 case "NonRecursive":
-                    logic.SolveNonRecursive(n);
+                    await logic.SolveNonRecursive(n, tower);
                     break;
             }
 
-            // --- Chạy animation ---
-            await AnimateMovesOptimized();
+            await Dispatcher.InvokeAsync(() => StepDescription.Text = "✅ Hoàn thành!");
         }
-
-        // --- Lấy stack theo chỉ số ---
-        DT.MyStack GetStack(int index)
+        private async Task WaitIfPausedAsync(CancellationToken token)
         {
-            return index switch
+            while (isPaused || (stepMode && !nextStep))
             {
-                0 => tower.A,
-                1 => tower.B,
-                _ => tower.C
-            };
-        }
-        // --- Chạy animation ---
-        // --- AnimateMoves tối ưu ---
-        async Task AnimateMovesOptimized()
-        {
-            Stack<HanoiLogic.MoveDisk> temp = new();
-            while (!logic.Moves.IsEmpty())
-                temp.Push(logic.Moves.Pop()!);
-
-            while (temp.Count > 0)
-            {
-                while (isPaused && !stepMode) await Task.Delay(50);
-                if (stepMode && !nextStep) { await Task.Delay(50); continue; }
-                nextStep = false;
-
-                var move = temp.Pop();
-                var from = GetStack(move.From);
-                var to = GetStack(move.To);
-
-                int fromCount = from.Count();
-                int toCount = to.Count();
-
-                var disk = from.Pop();
-                if (disk == null) continue;
-
-                var movingRect = diskUI[disk];
-                var movingLabel = labelUI[disk];
-
-                double fromX = 150 + move.From * 250;
-                double toX = 150 + move.To * 250;
-                double fromY = BaseY - fromCount * (DiskHeight + 3);
-                double toY = BaseY - (toCount + 1) * (DiskHeight + 3);
-
-                var originalBrush = movingRect.Fill;
-                movingRect.Fill = Brushes.Red;
-
-                int frames = 25;
-                double lift = 80;
-
-                // nhấc lên
-                for (int i = 0; i < frames; i++)
-                {
-                    double y = fromY - (lift * i / frames);
-                    Canvas.SetTop(movingRect, y);
-                    Canvas.SetTop(movingLabel, y + 2);
-                    await Task.Delay(10);
-                }
-
-                // đi ngang
-                for (int i = 0; i < frames; i++)
-                {
-                    double x = fromX + (toX - fromX) * i / frames;
-                    Canvas.SetLeft(movingRect, x - movingRect.Width / 2);
-                    Canvas.SetLeft(movingLabel, x - movingRect.Width / 2);
-                    await Task.Delay(10);
-                }
-
-                // hạ xuống
-                for (int i = 0; i < frames; i++)
-                {
-                    double y = fromY - lift + (toY - (fromY - lift)) * i / frames;
-                    Canvas.SetTop(movingRect, y);
-                    Canvas.SetTop(movingLabel, y + 2);
-                    await Task.Delay(10);
-                }
-
-                movingRect.Fill = originalBrush;
-
-                to.Push(disk);
-                DrawStackUI(from, move.From);
-                DrawStackUI(to, move.To);
-
-                await Task.Delay(150);
+                token.ThrowIfCancellationRequested();
+                await Task.Delay(50, token);
             }
+            nextStep = false;
+        }
+        private void Pause_Click(object sender, RoutedEventArgs e)
+        {
+            isPaused = true;
+            PauseButton.IsEnabled = false;
+            ResumeButton.IsEnabled = true;
+            RunButton.IsEnabled = true;   // ✅ Cho phép bấm Run trong khi Pause
         }
 
-        void Pause_Click(object sender, RoutedEventArgs e) => isPaused = true;
-        void Step_Click(object sender, RoutedEventArgs e)
-        {
-            stepMode = true;
-            nextStep = true;
-        }
-        void Resume_Click(object sender, RoutedEventArgs e)
+        private void Resume_Click(object sender, RoutedEventArgs e)
         {
             isPaused = false;
-            stepMode = false;
-            nextStep = false;
+            PauseButton.IsEnabled = true;
+            ResumeButton.IsEnabled = false;
+            RunButton.IsEnabled = true;   // ✅ vẫn bật để có thể chạy lại nếu muốn
+        }
+        private void NumberOnly(object sender, System.Windows.Input.TextCompositionEventArgs e)
+        {
+            e.Handled = !e.Text.All(char.IsDigit);
         }
     }
 }
-            
