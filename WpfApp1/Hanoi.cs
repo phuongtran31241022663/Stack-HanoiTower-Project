@@ -50,8 +50,8 @@ namespace WpfApp1.Hanoi
         // Stack
         public class MyStack<T>
         {
-            private Node<T>? Top;
-            private int count = 0; // Biến này để quản lý số lượng phần tử
+            public Node<T>? Top;
+            public int count = 0; // Biến này để quản lý số lượng phần tử
             public bool IsEmpty() => Top == null;
             public int Size() => count; // Thay cho hàm Count() chạy vòng lặp
             public void Push(T item)

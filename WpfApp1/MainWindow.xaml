@@ -54,7 +54,7 @@
                     <ComboBoxItem Content="Phi đệ quy"/>
                 </ComboBox>
 
-                <Button x:Name="BtnStart" Content="3. Bắt đầu ▶" Click="BtnStart_Click" 
+                <Button x:Name="BtnStart" x:FieldModifier="public" Content="3. Bắt đầu ▶" Click="BtnStart_Click" 
                         Background="#2980B9" FontWeight="Bold" Margin="15,0" Width="120"/>
             </StackPanel>
         </Border>
@@ -74,10 +74,10 @@
                 </StackPanel>
 
                 <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
-                    <Button x:Name="BtnPause" Content="⏸ Tạm dừng" Click="BtnPause_Click" Margin="5,0" Width="90" Background="#E67E22"/>
-                    <Button x:Name="BtnResume" Content="⏵ Tiếp tục" Click="BtnResume_Click" Margin="5,0" Width="90" Background="#16A085"/>
-                    <Button x:Name="BtnStats" Content="📊 Thống kê" Click="BtnStats_Click" Margin="5,0" Width="90" Background="#8E44AD"/>
-                    <Button x:Name="BtnStop" Content="⏹ Dừng hẳn" Click="BtnStop_Click" Background="#C0392B" Margin="5,0" Width="90"/>
+                    <Button x:Name="BtnPause" x:FieldModifier="public" Content="⏸ Tạm dừng" Click="BtnPause_Click" Margin="5,0" Width="90" Background="#E67E22"/>
+                    <Button x:Name="BtnResume" x:FieldModifier="public" Content="⏵ Tiếp tục" Click="BtnResume_Click" Margin="5,0" Width="90" Background="#16A085"/>
+                    <Button x:Name="BtnStats" x:FieldModifier="public" Content="📊 Thống kê" Click="BtnStats_Click" Margin="5,0" Width="90" Background="#8E44AD"/>
+                    <Button x:Name="BtnStop" x:FieldModifier="public" Content="⏹ Dừng hẳn" Click="BtnStop_Click" Background="#C0392B" Margin="5,0" Width="90"/>
                 </StackPanel>
             </Grid>
         </Border>

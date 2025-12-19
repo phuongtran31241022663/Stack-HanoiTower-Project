@@ -65,7 +65,7 @@ namespace WpfApp1
             if (StepText != null) StepText.Text = "Đã khởi tạo tháp với " + n + " đĩa.";
         }
         // Bắt đầu giải và diễn họa
-        private async void BtnStart_Click(object sender, RoutedEventArgs e)
+        public async void BtnStart_Click(object sender, RoutedEventArgs e)
         {
             if (!int.TryParse(TxtDisk.Text, out int n) || n < 1) return;
 
@@ -115,7 +115,7 @@ namespace WpfApp1
             }
         }
         // Dừng tiến trình
-        private void BtnStop_Click(object sender, RoutedEventArgs e)
+        public void BtnStop_Click(object sender, RoutedEventArgs e)
         {
             StopCurrentProcess();
             if (StepText != null) StepText.Text = "Đã dừng tiến trình.";
@@ -123,9 +123,9 @@ namespace WpfApp1
         #endregion
 
         #region 4. Điều khiển Diễn họa (Animation Controls)
-        private void BtnPause_Click(object sender, RoutedEventArgs e) => visualizer.Pause();
+        public void BtnPause_Click(object sender, RoutedEventArgs e) => visualizer.Pause();
 
-        private void BtnResume_Click(object sender, RoutedEventArgs e) => visualizer.Resume();
+        public void BtnResume_Click(object sender, RoutedEventArgs e) => visualizer.Resume();
 
         private void DelaySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
@@ -135,7 +135,7 @@ namespace WpfApp1
         #endregion
 
         #region 5. Thống kê & Hỗ trợ nội bộ
-        private void BtnStats_Click(object sender, RoutedEventArgs e)
+        public void BtnStats_Click(object sender, RoutedEventArgs e)
         {
             if (logic == null || moveHistory == null || moveHistory.IsEmpty())
             {
