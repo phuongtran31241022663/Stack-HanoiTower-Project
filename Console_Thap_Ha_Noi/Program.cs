@@ -469,6 +469,7 @@ namespace ThapHanoiProject
                                 for (int i = 0; i < p7.Length; i++) int.TryParse(p7[i], out arr[i]);
 
                                 Console.WriteLine("Mảng ban đầu: " + string.Join(" ", arr));
+                                AlgorithmSet.QuickSortIterative(arr);
                                 Console.WriteLine("Mảng sau khi sắp xếp: " + string.Join(" ", arr));
                                 PerformanceTester.MeasureTime("QuickSort Iterative", () => AlgorithmSet.QuickSortIterative(arr));
                             }
