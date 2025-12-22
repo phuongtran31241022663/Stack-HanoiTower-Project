@@ -74,13 +74,8 @@ namespace ThapHanoiProject
 
     public class HanoiLogic
     {
-        private MyStack<Move> moveHistory;
-
-        public HanoiLogic(MyStack<Move> moveHistory)
-        {
-            this.moveHistory = moveHistory;
-        }
-
+        private MyStack<Move> history;
+        public HanoiLogic(MyStack<Move> history) => this.history = history;
         public void MoveBetween(Tower tower, int src, int dest)
         {
             var sPeg = tower.Pegs[src];
@@ -106,7 +101,7 @@ namespace ThapHanoiProject
             if (d != null)
             {
                 to.Push(d);
-                moveHistory.Push(new Move(fIdx, tIdx, d.Size));
+                history.Push(new Move(fIdx, tIdx, d.Size));
             }
         }
 
@@ -159,55 +154,28 @@ namespace ThapHanoiProject
             return duration;
         }
     }
-
-
     public static class PerformanceTester
     {
         public static TimeSpan MeasureTime(string taskName, Action action)
         {
             Timing t = new Timing();
             t.startTime();
-
-
             action();
-
-
             t.StopTime();
-
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"-> [THOI GIAN] {taskName}: {t.Result().TotalMilliseconds:F4} ms");
-            Console.ResetColor();
 
             return t.Result();
         }
-
-
-        public static void MeasureMemoryAndRun(string taskName, Action action)
+        public static void MeasureMemory(Action action, int loops)
         {
-            long startMem = GC.GetTotalMemory(true);
+            GC.Collect();
+            long before = GC.GetTotalMemory(true);
 
+                action();
 
-            Timing t = new Timing();
-            t.startTime();
-
-
-            action();
-
-
-            t.StopTime();
-
-
-            long endMem = GC.GetTotalMemory(false);
-            long memUsed = Math.Max(0, endMem - startMem);
-
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"-> [THOI GIAN] {taskName}: {t.Result().TotalMilliseconds:F4} ms");
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"-> [BO NHO]    {taskName}: ~{memUsed} bytes");
-            Console.ResetColor();
+            long after = GC.GetTotalMemory(true);
+            Console.WriteLine($"Memory used: {(after - before) / loops} bytes");
         }
+
     }
 
     // 6 THUẬT TOÁN BỔ SUNG
@@ -350,8 +318,9 @@ namespace ThapHanoiProject
         static void Main(string[] args)
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            int loops = 1000000;
-            TimeSpan totalTime;
+            int loopsFast = 1;
+            int loopsSlow = 1000000;
+            TimeSpan Time;
             while (true)
             {
                 Console.Clear();
@@ -375,108 +344,131 @@ namespace ThapHanoiProject
                 {
                     switch (choice)
                     {
-                        case "1": // HANOI
+                        case "1": // Hanoi
                             Console.Write("Nhập số đĩa n: ");
-                            if (int.TryParse(Console.ReadLine(), out int n))
+                            if (!int.TryParse(Console.ReadLine(), out int n)) { Console.WriteLine("Số đĩa không hợp lệ!"); break; }
+
+                            int loops;
+                            if (n <= 10) loops = 1000000;
+                            else if (n <= 15) loops = 1000;
+                            else loops = 1;
+
+                            Time = PerformanceTester.MeasureTime("Hanoi", () =>
                             {
-                                PerformanceTester.MeasureMemoryAndRun($"Giai Thap Ha Noi {n} dia", () =>
+                                for (int i = 0; i < loops; i++)
                                 {
+                                    MyStack<Move> hist = new MyStack<Move>();
                                     Tower t = new Tower();
-                                    for (int i = n; i >= 1; i--) t.CreateDisk(i, 0);
-                                    MyStack<Move> history = new MyStack<Move>();
-                                    HanoiLogic logic = new HanoiLogic(history);
+                                    for (int d = n; d >= 1; d--) t.CreateDisk(d, 0);
+                                    HanoiLogic l = new HanoiLogic(hist);
+                                    l.SolveNonRecursive(n, t);
+                                }
+                            });
 
-                                    logic.SolveNonRecursive(n, t);
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine($"\n-> Thời gian: {Time.TotalMilliseconds / loops:F6} ms");
+                            Console.ResetColor();
 
-                                    //dsach buoc giai
-                                    if (n <= 10)
-                                    {
-                                        Console.WriteLine("\n--- CÁC BƯỚC GIẢI ---");
-                                        var moves = history.ToArray();
-                                        Array.Reverse(moves);
+                            PerformanceTester.MeasureMemory(() =>
+                            {
+                                for (int i = 0; i < loops; i++)
+                                {
+                                    MyStack<Move> hist = new MyStack<Move>();
+                                    Tower t = new Tower();
+                                    for (int d = n; d >= 1; d--) t.CreateDisk(d, 0);
+                                    HanoiLogic l = new HanoiLogic(hist);
+                                    l.SolveNonRecursive(n, t);
+                                }
+                            }, loops);
 
-                                        string[] poleNames = { "A", "B", "C" };
-                                        int stepCount = 0;
+                            // In bước giải nếu n nhỏ
+                            if (n <= 7)
+                            {
+                                MyStack<Move> hist = new MyStack<Move>();
+                                Tower t = new Tower();
+                                for (int d = n; d >= 1; d--) t.CreateDisk(d, 0);
+                                HanoiLogic l = new HanoiLogic(hist);
+                                l.SolveNonRecursive(n, t);
 
-                                        foreach (var m in moves)
-                                        {
-                                            stepCount++;
-                                            string from = poleNames[m.From];
-                                            string to = poleNames[m.To];
-                                            Console.WriteLine($"Bước {stepCount}: Chuyển đĩa {m.DiskSize} từ {from} sang {to}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine($"\n(Đã ẩn chi tiết {history.Size()} bước giải vì số lượng quá lớn)");
-                                    }
-                                });
+                                Console.WriteLine("\n--- Các bước giải ---");
+                                var moves = hist.ToArray();
+                                Array.Reverse(moves);
+                                string[] pole = { "A", "B", "C" };
+                                int step = 0;
+                                foreach (var m in moves)
+                                {
+                                    step++;
+                                    Console.WriteLine($"Bước {step}: Chuyển đĩa {m.DiskSize} từ {pole[m.From]} sang {pole[m.To]}");
+                                }
                             }
-                            else Console.WriteLine("Số đĩa không hợp lệ!");
+                            else
+                            {
+                                Console.WriteLine($"(Ẩn bước giải do số lượng quá lớn)");
+                            }
                             break;
-
                         case "2": // SORT STACK
                             Console.Write("Nhập các số nguyên muốn sắp xếp, cách nhau bởi khoảng trắng (VD: 5 2 9 1): ");
                             string input2 = Console.ReadLine() ?? "";
                             if (!string.IsNullOrWhiteSpace(input2))
                             {
-                                string[] p2 = input2.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                                MyStack<int> s2 = new MyStack<int>();
-                                foreach (var x in p2) if (int.TryParse(x, out int v)) s2.Push(v);
+                                int[] arr2 = Array.ConvertAll(input2.Split(' ', StringSplitOptions.RemoveEmptyEntries), int.Parse);
 
-                                AlgorithmSet.PrintStack(s2, "Input");
-                                totalTime = PerformanceTester.MeasureTime("Sort Stack", () =>
+                                Time = PerformanceTester.MeasureTime("Sort Stack", () =>
                                 {
-                                    for (int i = 0; i < loops; i++)
+                                    for (int i = 0; i < loopsSlow; i++)
+                                    {
+                                        MyStack<int> s2 = new MyStack<int>();
+                                        foreach (var x in arr2) s2.Push(x);
                                         AlgorithmSet.SortStack(s2);
+                                    }
                                 });
-                                Console.WriteLine($"Thời gian trung bình 1 lần: {totalTime.TotalMilliseconds / loops:F6} ms");
+                                Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loopsFast:F6} ms");
                             }
                             break;
-
                         case "3": // REVERSE
                             Console.Write("Nhập chuỗi bất kì: ");
                             string input3 = Console.ReadLine() ?? "";
-                            totalTime = PerformanceTester.MeasureTime($"Reverse String", () =>
+                            Time = PerformanceTester.MeasureTime("Reverse String", () =>
                             {
-                                for (int i = 0; i < loops; i++)
+                                for (int i = 0; i < loopsSlow; i++)
                                     AlgorithmSet.ReverseString(input3);
                             });
-                            Console.WriteLine($"Thời gian trung bình 1 lần: {totalTime.TotalMilliseconds / loops:F6} ms");
+                            Console.WriteLine($"Thời gian: {Time.TotalMilliseconds/loopsFast:F6} ms");
+
                             break;
 
                         case "4": // BINARY
                             Console.Write("Nhập số nguyên: ");
                             if (int.TryParse(Console.ReadLine(), out int nb))
                             { 
-                            totalTime = PerformanceTester.MeasureTime("Decimal to Binary", () =>
+                            Time = PerformanceTester.MeasureTime("Decimal to Binary", () =>
                             {
-                                for (int i = 0; i < loops; i++)
+                                for (int i = 0; i < loopsSlow; i++)
                                     AlgorithmSet.DecimalToBinary(nb);
                             });
-                            Console.WriteLine($"Thời gian trung bình 1 lần: {totalTime.TotalMilliseconds / loops:F6} ms");
-                    }
+                                Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loopsFast:F6} ms");
+                            }
                             break;
 
                         case "5": // PARENTHESES
                             Console.Write("Nhập biểu thức ngoặc (VD: {[]} ): ");
                             string input5 = Console.ReadLine() ?? "";
-                            totalTime = PerformanceTester.MeasureTime($"Check Parentheses", () =>
+                            Time = PerformanceTester.MeasureTime($"Check Parentheses", () =>
                             {
-                                for (int i = 0; i < loops; i++)
+                                for (int i = 0; i < loopsSlow; i++)
                                     AlgorithmSet.IsValidParentheses(input5);
                             });
-                            Console.WriteLine($"Thời gian trung bình 1 lần: {totalTime.TotalMilliseconds / loops:F6} ms");
+                            Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loopsFast:F6} ms");
                             break;
                         case "6": // POSTFIX
                             Console.WriteLine("Nhập hậu tố (VD: 10 5 + 3 *):");
                             string post = Console.ReadLine() ?? "";
-                            totalTime = PerformanceTester.MeasureTime($"Evaluate Postfix", () =>
+                            Time = PerformanceTester.MeasureTime($"Evaluate Postfix", () =>
                             {
-                                for (int i = 0; i < loops; i++)
+                                for (int i = 0; i < loopsSlow; i++)
                                     AlgorithmSet.EvaluatePostfix(post);
                             });
-                            Console.WriteLine($"Thời gian trung bình 1 lần: {totalTime.TotalMilliseconds / loops:F6} ms");
+                            Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loopsFast:F6} ms");
                             break;
 
                         case "7": // QUICKSORT
@@ -484,25 +476,18 @@ namespace ThapHanoiProject
                             string inputArr = Console.ReadLine() ?? "";
                             if (!string.IsNullOrWhiteSpace(inputArr))
                             {
-                                string[] p7 = inputArr.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                                int[] arr = new int[p7.Length];
-                                for (int i = 0; i < p7.Length; i++) int.TryParse(p7[i], out arr[i]);
-
-                                Console.WriteLine("Mảng ban đầu: " + string.Join(" ", arr));
-                                AlgorithmSet.QuickSortIterative(arr);
-                                Console.WriteLine("Mảng sau khi sắp xếp: " + string.Join(" ", arr));
-                                totalTime = PerformanceTester.MeasureTime("QuickSort Iterative", () =>
+                                int[] arr = Array.ConvertAll(inputArr.Split(' ', StringSplitOptions.RemoveEmptyEntries), int.Parse);
+                                Time = PerformanceTester.MeasureTime("QuickSort Iterative", () =>
                                 {
-                                    for (int i = 0; i < loops; i++)
+                                    for (int i = 0; i < loopsSlow; i++)
                                     {
                                         int[] copy = (int[])arr.Clone();
                                         AlgorithmSet.QuickSortIterative(copy);
                                     }
                                 });
-                                Console.WriteLine($"Thời gian trung bình 1 lần: {totalTime.TotalMilliseconds / loops:F6} ms");
+                                Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loopsFast:F6} ms");
                             }
                             break;
-
                         case "0": return;
                     }
                 }
