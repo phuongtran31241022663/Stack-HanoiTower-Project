@@ -155,7 +155,7 @@ namespace ThapHanoiProject
     }
     public static class PerformanceTester
     {
-        public static TimeSpan MeasureTime(string taskName, Action action)
+        public static TimeSpan MeasureTime(Action action)
         {
             Timing t = new Timing();
             t.startTime();
@@ -339,7 +339,7 @@ namespace ThapHanoiProject
                             else if (n <= 15) loop = 1000;
                             else loop = 1;
 
-                            Time = PerformanceTester.MeasureTime("Hanoi", () =>
+                            Time = PerformanceTester.MeasureTime(() =>
                             {
                                 for (int i = 0; i < loop; i++)
                                 {
@@ -376,7 +376,9 @@ namespace ThapHanoiProject
                             }
                             else
                             {
-                                Console.WriteLine($"(Ẩn bước giải do số lượng quá lớn)");
+                                long totalSteps = (1L << n) - 1;
+                                Console.WriteLine($"\n(Ẩn bước giải do số lượng quá lớn)");
+                                Console.WriteLine($"Tổng số bước cần thực hiện: {totalSteps:N0}");
                             }
                             break;
                         case "2": // SORT STACK
@@ -385,23 +387,30 @@ namespace ThapHanoiProject
                             if (!string.IsNullOrWhiteSpace(input2))
                             {
                                 int[] arr2 = Array.ConvertAll(input2.Split(' ', StringSplitOptions.RemoveEmptyEntries), int.Parse);
-                                MyStack<int> s2 = new MyStack<int>();
+                                Console.WriteLine("Input: " + string.Join(" ", arr2));
 
-                                Time = PerformanceTester.MeasureTime("Sort Stack", () =>
+                                MyStack<int>? sortedResult = null;
+
+                                Time = PerformanceTester.MeasureTime(() =>
                                 {
                                     for (int i = 0; i < loops; i++)
                                     {
-                                        s2 = new MyStack<int>();
-                                        foreach (var x in arr2) s2.Push(x);
-                                        AlgorithmSet.SortStack(s2);
+                                        MyStack<int> s = new MyStack<int>();
+                                        foreach (var x in arr2) s.Push(x);
+
+                                        var sorted = AlgorithmSet.SortStack(s);
+
+                                        if (i == loops - 1)
+                                            sortedResult = sorted;
                                     }
                                 });
-                                MyStack<int> sorted = new MyStack<int>();
-                                foreach (var x in arr2) sorted.Push(x);
-                                sorted = AlgorithmSet.SortStack(sorted);
-                                var sortedArr = sorted.ToArray();
-                                Array.Reverse(sortedArr);
-                                Console.WriteLine("Kết quả sắp xếp: " + string.Join(" ", sortedArr));
+
+                                if (sortedResult != null)
+                                {
+                                    var sortedArr = sortedResult.ToArray();
+                                    Console.WriteLine("Output: " + string.Join(" ", sortedArr));
+                                }
+
                                 Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loops:F6} ms");
                             }
                             else
@@ -414,7 +423,7 @@ namespace ThapHanoiProject
                             string input3 = Console.ReadLine() ?? "";
                             string rev = AlgorithmSet.ReverseString(input3);
                             Console.WriteLine($"Chuỗi đảo: {rev}");
-                            Time = PerformanceTester.MeasureTime("Reverse String", () =>
+                            Time = PerformanceTester.MeasureTime(() =>
                             {
                                 for (int i = 0; i < loops; i++)
                                     AlgorithmSet.ReverseString(input3);
@@ -427,7 +436,7 @@ namespace ThapHanoiProject
                             if (int.TryParse(Console.ReadLine(), out int nb))
                             Console.WriteLine($"Kết quả nhị phân: {AlgorithmSet.DecimalToBinary(nb)}");
                             {
-                                Time = PerformanceTester.MeasureTime("Decimal to Binary", () =>
+                                Time = PerformanceTester.MeasureTime(() =>
                             {
                                 for (int i = 0; i < loops; i++)
                                     AlgorithmSet.DecimalToBinary(nb);
@@ -439,14 +448,14 @@ namespace ThapHanoiProject
                         case "5": // PARENTHESES
                             Console.Write("Nhập biểu thức ngoặc (VD: {[]} ): ");
                             string input5 = Console.ReadLine() ?? "";
-                            Time = PerformanceTester.MeasureTime($"Check Parentheses", () =>
+                            Time = PerformanceTester.MeasureTime(() =>
                             {
                                 for (int i = 0; i < loops; i++)
                                     AlgorithmSet.IsValidParentheses(input5);
                             });
-                            Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loops:F6} ms");
                             bool ok = AlgorithmSet.IsValidParentheses(input5);
-                            Console.WriteLine($"Hợp lệ: {(ok ? "Đúng" : "Sai")}");
+                            Console.WriteLine($"Kết quả: {(ok ? "Hợp lệ" : "Không hợp lệ")}");
+                            Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loops:F6} ms");
                             break;
 
                         case "6": // POSTFIX
@@ -459,7 +468,7 @@ namespace ThapHanoiProject
                                 break;
                             }
 
-                            Time = PerformanceTester.MeasureTime("Evaluate Postfix", () =>
+                            Time = PerformanceTester.MeasureTime(() =>
                             {
                                 for (int i = 0; i < loops; i++)
                                     AlgorithmSet.EvaluatePostfix(post);
@@ -485,7 +494,7 @@ namespace ThapHanoiProject
                             {
                                 int[] arr = Array.ConvertAll(inputArr.Split(' ', StringSplitOptions.RemoveEmptyEntries), int.Parse);
                                 int[] copy = (int[])arr.Clone();
-                                Time = PerformanceTester.MeasureTime("QuickSort Iterative", () =>
+                                Time = PerformanceTester.MeasureTime(() =>
                                 {
                                     for (int i = 0; i < loops; i++)
                                     {
