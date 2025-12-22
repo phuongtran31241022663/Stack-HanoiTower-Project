@@ -163,7 +163,7 @@ namespace ThapHanoiProject
 
     public static class PerformanceTester
     {
-        public static void MeasureTime(string taskName, Action action)
+        public static TimeSpan MeasureTime(string taskName, Action action)
         {
             Timing t = new Timing();
             t.startTime();
@@ -178,6 +178,8 @@ namespace ThapHanoiProject
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine($"-> [THOI GIAN] {taskName}: {t.Result().TotalMilliseconds:F4} ms");
             Console.ResetColor();
+
+            return t.Result();
         }
 
 
@@ -348,6 +350,8 @@ namespace ThapHanoiProject
         static void Main(string[] args)
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
+            int loops = 1000000;
+            TimeSpan totalTime;
             while (true)
             {
                 Console.Clear();
@@ -421,41 +425,58 @@ namespace ThapHanoiProject
                                 foreach (var x in p2) if (int.TryParse(x, out int v)) s2.Push(v);
 
                                 AlgorithmSet.PrintStack(s2, "Input");
-                                PerformanceTester.MeasureTime("Sort Stack", () =>
+                                totalTime = PerformanceTester.MeasureTime("Sort Stack", () =>
                                 {
-                                    var res = AlgorithmSet.SortStack(s2);
-                                    AlgorithmSet.PrintStack(res, "Sorted");
+                                    for (int i = 0; i < loops; i++)
+                                        AlgorithmSet.SortStack(s2);
                                 });
+                                Console.WriteLine($"Thời gian trung bình 1 lần: {totalTime.TotalMilliseconds / loops:F6} ms");
                             }
                             break;
 
                         case "3": // REVERSE
                             Console.Write("Nhập chuỗi bất kì: ");
                             string input3 = Console.ReadLine() ?? "";
-                            PerformanceTester.MeasureTime("Reverse", () =>
-                                Console.WriteLine(AlgorithmSet.ReverseString(input3)));
+                            totalTime = PerformanceTester.MeasureTime($"Reverse String", () =>
+                            {
+                                for (int i = 0; i < loops; i++)
+                                    AlgorithmSet.ReverseString(input3);
+                            });
+                            Console.WriteLine($"Thời gian trung bình 1 lần: {totalTime.TotalMilliseconds / loops:F6} ms");
                             break;
 
                         case "4": // BINARY
                             Console.Write("Nhập số nguyên: ");
                             if (int.TryParse(Console.ReadLine(), out int nb))
-                                PerformanceTester.MeasureTime("Binary", () =>
-                                    Console.WriteLine("Số nhị phân: " + AlgorithmSet.DecimalToBinary(nb)));
+                            { 
+                            totalTime = PerformanceTester.MeasureTime("Decimal to Binary", () =>
+                            {
+                                for (int i = 0; i < loops; i++)
+                                    AlgorithmSet.DecimalToBinary(nb);
+                            });
+                            Console.WriteLine($"Thời gian trung bình 1 lần: {totalTime.TotalMilliseconds / loops:F6} ms");
+                    }
                             break;
 
                         case "5": // PARENTHESES
                             Console.Write("Nhập biểu thức ngoặc (VD: {[]} ): ");
                             string input5 = Console.ReadLine() ?? "";
-                            PerformanceTester.MeasureTime("Check Parentheses", () =>
-                                // [FIXED] Sửa lỗi cú pháp: Thêm ngoặc bao quanh biểu thức tam phân
-                                Console.WriteLine("Kết quả: " + (AlgorithmSet.IsValidParentheses(input5) ? "Hợp lệ" : "Không hợp lệ")));
+                            totalTime = PerformanceTester.MeasureTime($"Check Parentheses", () =>
+                            {
+                                for (int i = 0; i < loops; i++)
+                                    AlgorithmSet.IsValidParentheses(input5);
+                            });
+                            Console.WriteLine($"Thời gian trung bình 1 lần: {totalTime.TotalMilliseconds / loops:F6} ms");
                             break;
-
                         case "6": // POSTFIX
                             Console.WriteLine("Nhập hậu tố (VD: 10 5 + 3 *):");
                             string post = Console.ReadLine() ?? "";
-                            PerformanceTester.MeasureTime("Eval Postfix", () =>
-                                Console.WriteLine("Kết quả: " + AlgorithmSet.EvaluatePostfix(post)));
+                            totalTime = PerformanceTester.MeasureTime($"Evaluate Postfix", () =>
+                            {
+                                for (int i = 0; i < loops; i++)
+                                    AlgorithmSet.EvaluatePostfix(post);
+                            });
+                            Console.WriteLine($"Thời gian trung bình 1 lần: {totalTime.TotalMilliseconds / loops:F6} ms");
                             break;
 
                         case "7": // QUICKSORT
@@ -470,7 +491,15 @@ namespace ThapHanoiProject
                                 Console.WriteLine("Mảng ban đầu: " + string.Join(" ", arr));
                                 AlgorithmSet.QuickSortIterative(arr);
                                 Console.WriteLine("Mảng sau khi sắp xếp: " + string.Join(" ", arr));
-                                PerformanceTester.MeasureTime("QuickSort Iterative", () => AlgorithmSet.QuickSortIterative(arr));
+                                totalTime = PerformanceTester.MeasureTime("QuickSort Iterative", () =>
+                                {
+                                    for (int i = 0; i < loops; i++)
+                                    {
+                                        int[] copy = (int[])arr.Clone();
+                                        AlgorithmSet.QuickSortIterative(copy);
+                                    }
+                                });
+                                Console.WriteLine($"Thời gian trung bình 1 lần: {totalTime.TotalMilliseconds / loops:F6} ms");
                             }
                             break;
 
