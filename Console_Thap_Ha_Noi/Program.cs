@@ -310,7 +310,6 @@ namespace ThapHanoiProject
 
             while (!s.IsEmpty())
             {
-                // [SỬA LỖI]: Bỏ ?? 0
                 int end = s.Pop();
                 int start = s.Pop();
                 if (end - start < 1) continue;
