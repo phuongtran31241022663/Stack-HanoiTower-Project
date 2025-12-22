@@ -28,10 +28,6 @@
 //            * Đệ quy (SolveRecursive).
 //            * Phi đệ quy (SolveNonRecursive).
 //        + Thuật toán bổ sung:
-//            * SortStack      : sắp xếp lại cọc đĩa.
-//            * IsValidStack   : kiểm tra tính hợp lệ của cọc.
-//            * SearchDisk     : tìm đĩa theo kích thước.
-//            * CopyTower      : sao chép trạng thái Tower.
 //            * GetMoveStats   : thống kê số lần di chuyển.
 //            * SolveFromArbitraryState : Giải bài toán từ trạng thái bất kỳ.
 // ------------------------------------------------------------
@@ -246,86 +242,6 @@ namespace WpfApp1.Hanoi
         }
         #endregion
         #region Thuật toán bổ sung
-        // 1. Thuật toán sắp xếp Stack
-        // Sử dụng thuật toán Sort với 1 Stack phụ - O(N^2)
-        public void SortStack(HanoiStack stack)
-        {
-            if (stack.IsEmpty()) return;
-            var auxStack = new DataStructures.MyStack<DataStructures.Disk>();
-
-            while (!stack.IsEmpty())
-            {
-                // 1. Lấy đĩa ở đỉnh stack chính ra
-                var tmp = stack.Pop()!;
-
-                // 2. Trong khi đĩa ở đỉnh auxStack NHỎ HƠN đĩa đang cầm (tmp)
-                // thì đẩy ngược những đĩa nhỏ đó về stack chính để tìm chỗ đứng cho đĩa to hơn.
-                while (!auxStack.IsEmpty() && auxStack.Peek()!.Size < tmp.Size)
-                {
-                    stack.Push(auxStack.Pop()!);
-                }
-
-                // 3. Đẩy đĩa đang cầm vào auxStack (Lúc này auxStack sẽ theo thứ tự: Nhỏ ở dưới - To ở trên)
-                auxStack.Push(tmp);
-            }
-
-            // 4. Đổ ngược từ auxStack về stack chính. 
-            // Đĩa To nhất (ở đỉnh auxStack) sẽ vào đáy stack chính.
-            // Đĩa Nhỏ nhất sẽ vào cuối cùng -> Nằm ở đỉnh (Top) stack chính.
-            while (!auxStack.IsEmpty())
-            {
-                stack.Push(auxStack.Pop()!);
-            }
-        }
-        // 2. Thuật toán kiểm tra trạng thái hợp lệ của Stack
-        // Kiểm tra cọc đĩa hiện tại có vi phạm luật (đĩa lớn nằm trên đĩa nhỏ) hay không.
-        public bool IsValidStack(HanoiStack stack)
-        {
-            if (stack.IsEmpty()) return true;
-            var temp = new DataStructures.MyStack<DataStructures.Disk>();
-            bool valid = true;
-            DataStructures.Disk? prev = null;
-
-            while (!stack.IsEmpty())
-            {
-                var current = stack.Pop()!;
-                if (prev != null && current.Size < prev.Size) valid = false;
-                prev = current;
-                temp.Push(current);
-            }
-            while (!temp.IsEmpty()) stack.Push(temp.Pop()!);
-            return valid;
-        }
-        // 3. Tìm kiếm theo kích thước đĩa và tầng hiện tại của nó.
-        public int SearchDisk(HanoiStack stack, int targetSize)
-        {
-            var temp = new DataStructures.MyStack<DataStructures.Disk>();
-            int pos = -1, currentPos = 0;
-            while (!stack.IsEmpty())
-            {
-                var d = stack.Pop()!;
-                if (d.Size == targetSize) pos = currentPos;
-                temp.Push(d);
-                currentPos++;
-            }
-            while (!temp.IsEmpty()) stack.Push(temp.Pop()!);
-            return pos;
-        }
-        // Thuật toán sao chép Tower
-        public Tower CopyTower(Tower original)
-        {
-            Tower copy = new Tower();
-            for (int i = 0; i < 3; i++)
-            {
-                var disks = original.Get(i).ToArray();
-                // Duyệt ngược mảng ToArray (từ đáy lên) để Push vào Tower mới
-                for (int j = disks.Length - 1; j >= 0; j--)
-                {
-                    copy.Get(i).PushDisk(new DataStructures.Disk(disks[j].Size));
-                }
-            }
-            return copy;
-        }
         // Thuật toán thống kê số lần di chuyển từng đĩa
         // Thống kê tổng số lần di chuyển của mỗi đĩa dựa trên lịch sử.
         public DataStructures.MyStack<DataStructures.DiskStat> GetMoveStats()
