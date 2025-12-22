@@ -165,17 +165,6 @@ namespace ThapHanoiProject
 
             return t.Result();
         }
-        public static void MeasureMemory(Action action, int loops)
-        {
-            GC.Collect();
-            long before = GC.GetTotalMemory(true);
-
-                action();
-
-            long after = GC.GetTotalMemory(true);
-            Console.WriteLine($"Memory used: {(after - before) / loops} bytes");
-        }
-
     }
 
     // 6 THUẬT TOÁN BỔ SUNG
@@ -259,7 +248,6 @@ namespace ThapHanoiProject
                 else
                 {
                     if (sk.Size() < 2) return 0;
-                    // [SỬA LỖI]: Bỏ ?? 0
                     int b = sk.Pop();
                     int a = sk.Pop();
                     if (c == '+') sk.Push(a + b);
@@ -349,7 +337,7 @@ namespace ThapHanoiProject
                             if (!int.TryParse(Console.ReadLine(), out int n)) { Console.WriteLine("Số đĩa không hợp lệ!"); break; }
 
                             int loops;
-                            if (n <= 10) loops = 1000000;
+                            if (n <= 10) loops = 500000;
                             else if (n <= 15) loops = 1000;
                             else loops = 1;
 
@@ -369,20 +357,7 @@ namespace ThapHanoiProject
                             Console.WriteLine($"\n-> Thời gian: {Time.TotalMilliseconds / loops:F6} ms");
                             Console.ResetColor();
 
-                            PerformanceTester.MeasureMemory(() =>
-                            {
-                                for (int i = 0; i < loops; i++)
-                                {
-                                    MyStack<Move> hist = new MyStack<Move>();
-                                    Tower t = new Tower();
-                                    for (int d = n; d >= 1; d--) t.CreateDisk(d, 0);
-                                    HanoiLogic l = new HanoiLogic(hist);
-                                    l.SolveNonRecursive(n, t);
-                                }
-                            }, loops);
-
-                            // In bước giải nếu n nhỏ
-                            if (n <= 7)
+                            if (n <= 10)
                             {
                                 MyStack<Move> hist = new MyStack<Move>();
                                 Tower t = new Tower();
@@ -433,7 +408,7 @@ namespace ThapHanoiProject
                                 for (int i = 0; i < loopsSlow; i++)
                                     AlgorithmSet.ReverseString(input3);
                             });
-                            Console.WriteLine($"Thời gian: {Time.TotalMilliseconds/loopsFast:F6} ms");
+                            Console.WriteLine($"Thời gian: {Time.TotalMilliseconds/loopsSlow:F6} ms");
 
                             break;
 
@@ -446,7 +421,7 @@ namespace ThapHanoiProject
                                 for (int i = 0; i < loopsSlow; i++)
                                     AlgorithmSet.DecimalToBinary(nb);
                             });
-                                Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loopsFast:F6} ms");
+                                Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loopsSlow:F6} ms");
                             }
                             break;
 
@@ -458,7 +433,7 @@ namespace ThapHanoiProject
                                 for (int i = 0; i < loopsSlow; i++)
                                     AlgorithmSet.IsValidParentheses(input5);
                             });
-                            Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loopsFast:F6} ms");
+                            Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loopsSlow:F6} ms");
                             break;
                         case "6": // POSTFIX
                             Console.WriteLine("Nhập hậu tố (VD: 10 5 + 3 *):");
@@ -468,7 +443,7 @@ namespace ThapHanoiProject
                                 for (int i = 0; i < loopsSlow; i++)
                                     AlgorithmSet.EvaluatePostfix(post);
                             });
-                            Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loopsFast:F6} ms");
+                            Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loopsSlow:F6} ms");
                             break;
 
                         case "7": // QUICKSORT
@@ -485,7 +460,7 @@ namespace ThapHanoiProject
                                         AlgorithmSet.QuickSortIterative(copy);
                                     }
                                 });
-                                Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loopsFast:F6} ms");
+                                Console.WriteLine($"Thời gian: {Time.TotalMilliseconds / loopsSlow:F6} ms");
                             }
                             break;
                         case "0": return;
