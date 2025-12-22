@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="../ThapHN/ThapHN/ThapHN.csproj" />
   <Project Path="WpfApp1.Tests/WpfApp1.Tests.csproj" Id="8adb26c7-d971-4856-bac8-a353526024f0" />
   <Project Path="WpfApp1/WpfApp1.csproj" />
 </Solution>
