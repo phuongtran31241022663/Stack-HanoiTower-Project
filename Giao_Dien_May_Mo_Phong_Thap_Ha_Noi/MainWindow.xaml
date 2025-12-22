@@ -50,7 +50,7 @@
                 <TextBlock Text="2. Thuật toán:" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0"/>
                 <ComboBox x:Name="CbAlgorithm" Width="160" VerticalAlignment="Center" SelectedIndex="0" 
                           Background="#34495E" Foreground="Black">
-                    <ComboBoxItem Content="Đệ quy (Recursive)"/>
+                    <ComboBoxItem Content="Đệ quy"/>
                     <ComboBoxItem Content="Phi đệ quy"/>
                 </ComboBox>
 
@@ -70,7 +70,7 @@
 
                     <TextBlock Text="Tốc độ:" Foreground="White" VerticalAlignment="Center" Margin="20,0,10,0"/>
                     <Slider x:Name="DelaySlider" Minimum="50" Maximum="1000" Value="400" Width="150" 
-                            ValueChanged="DelaySlider_ValueChanged" VerticalAlignment="Center"/>
+                            IsDirectionReversed="True" ValueChanged="DelaySlider_ValueChanged" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">

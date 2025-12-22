@@ -9,11 +9,7 @@ namespace WpfApp1
             base.OnStartup(e);
 
             // Chạy test
-            WpfApp1.TimingTest.RunTests(17);
-
-            // Giữ App lại bằng cách hiện MainWindow
-            var main = new MainWindow();
-            main.Show();
+            WpfApp1.TimingTest.RunTests(15);
         }
     }
 }

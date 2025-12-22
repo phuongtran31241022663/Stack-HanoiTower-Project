@@ -33,8 +33,10 @@
 //            * SearchDisk     : tìm đĩa theo kích thước.
 //            * CopyTower      : sao chép trạng thái Tower.
 //            * GetMoveStats   : thống kê số lần di chuyển.
-//            * UndoMove       : hoàn tác bước di chuyển.
+//            * SolveFromArbitraryState : Giải bài toán từ trạng thái bất kỳ.
 // ------------------------------------------------------------
+using static WpfApp1.Hanoi.DataStructures;
+
 namespace WpfApp1.Hanoi
 {
     #region 1. Cấu trúc dữ liệu
@@ -120,6 +122,24 @@ namespace WpfApp1.Hanoi
             int level = 0;
             foreach (var d in ToArray()) { if (d == disk) return level; level++; }
             return -1;
+        }
+        public bool ContainsDisk(int size)
+        {
+            bool found = false;
+            MyStack<Disk> temp = new MyStack<Disk>();
+
+            while (!IsEmpty())
+            {
+                Disk d = Pop();
+                if (d.Size == size) found = true;
+                temp.Push(d);
+            }
+
+            // Khôi phục Stack ban đầu
+            while (!temp.IsEmpty())
+                Push(temp.Pop());
+
+            return found;
         }
     }
     // Quản lý 3 cọc
@@ -226,7 +246,7 @@ namespace WpfApp1.Hanoi
         }
         #endregion
         #region Thuật toán bổ sung
-        // 1. Thuật toán sắp xếp Stack (Sắp xếp đĩa nếu bị lộn xộn)
+        // 1. Thuật toán sắp xếp Stack
         // Sử dụng thuật toán Sort với 1 Stack phụ - O(N^2)
         public void SortStack(HanoiStack stack)
         {
@@ -329,13 +349,43 @@ namespace WpfApp1.Hanoi
 
             return statsStack;
         }
-        // Thuật toán Undo 1 bước di chuyển
-        public void UndoMove(Tower tower)
+        // Thuật toán giải Tháp Hà Nội từ trạng thái bất kỳ về cọc đích
+        public void SolveFromArbitraryState(Tower tower, int n, int targetPeg)
         {
-            if (moveHistory.IsEmpty()) return;
-            var last = moveHistory.Pop()!;
-            var disk = tower.Get(last.To).Pop();
-            if (disk != null) tower.Get(last.From).PushDisk(disk);
+            if (n <= 0) return;
+
+            // 1. Xác định vị trí hiện tại của đĩa n
+            int currentPeg = -1;
+            for (int i = 0; i < 3; i++)
+            {
+                if (tower.Get(i).ContainsDisk(n))
+                {
+                    currentPeg = i;
+                    break;
+                }
+            }
+
+            // Không đủ dữ liệu để xác minh nếu không tìm thấy đĩa n
+            if (currentPeg == -1) return;
+
+            // 2. Nếu đĩa n đã ở cọc đích → xử lý n-1
+            if (currentPeg == targetPeg)
+            {
+                SolveFromArbitraryState(tower, n - 1, targetPeg);
+                return;
+            }
+
+            // 3. Xác định cọc trung gian
+            int helperPeg = 3 - currentPeg - targetPeg;
+
+            // 4. Đưa n-1 đĩa về cọc trung gian (từ trạng thái bất kỳ)
+            SolveFromArbitraryState(tower, n - 1, helperPeg);
+
+            // 5. Di chuyển đĩa n sang cọc đích
+            MoveBetween(tower, currentPeg, targetPeg);
+
+            // 6. Đưa n-1 đĩa từ trung gian về cọc đích (giải chuẩn)
+            SolveRecursive(n - 1, helperPeg, targetPeg, currentPeg, tower);
         }
     }
     #endregion
