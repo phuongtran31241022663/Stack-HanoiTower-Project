@@ -376,7 +376,6 @@ namespace ThapHanoiProject
                             Console.Write("Nhập số đĩa n: ");
                             if (int.TryParse(Console.ReadLine(), out int n))
                             {
-                                // Giữ nguyên string không dấu trong code của bạn
                                 PerformanceTester.MeasureMemoryAndRun($"Giai Thap Ha Noi {n} dia", () =>
                                 {
                                     Tower t = new Tower();
